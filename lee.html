@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What each path exposes to the next hurricane | Restored or renewed?</title>
+<meta name="description" content="What each path exposes to the next hurricane. Companion site to a study of housing-stock renewal after Florida hurricanes, read from the annual assessment rolls.">
+<link rel="stylesheet" href="css/style.css?v=2">
+<link rel="preload" href="data/meta.json?v=2" as="fetch" crossorigin>
+<link rel="preload" href="data/exposure.json?v=2" as="fetch" crossorigin>
+<link rel="preload" href="data/overview.json?v=2" as="fetch" crossorigin>
+<link rel="preload" href="data/geo/counties.json?v=2" as="fetch" crossorigin>
+<link rel="preload" href="data/geo/context.json?v=2" as="fetch" crossorigin>
+<link rel="preload" href="data/geo/tracks.json?v=2" as="fetch" crossorigin>
+<link rel="modulepreload" href="js/shell.js?v=2">
+</head>
+<body>
+
+<a class="skip" href="#page">Skip to content</a>
+<header class="masthead" id="masthead">
+  <div class="masthead-inner compact">
+    <a class="homelink" href="index.html">Restored or renewed?</a>
+    <p class="crumb">What each path exposes to the next hurricane</p>
+  </div>
+</header>
+<nav class="sitenav" id="sitenav" aria-label="Pages">
+  <div class="sitenav-inner">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="storms.html">Sixteen storms</a></li>
+      <li><a href="renewal.html">Renewal window</a></li>
+      <li><a href="pathways.html">Pathways</a></li>
+      <li><a href="predictors.html">Redevelopment threshold</a></li>
+      <li><a href="lee.html">Next hurricane</a></li>
+      <li><a href="data.html">Data and methods</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main id="page" class="section">
+  <p class="standfirst">Houses that were restored and houses that were replaced met the next hurricane differently. The recovery plane puts each pathway against the intact structures of the same tracts on two axes, the value exposed per structure and the share of that value the second storm deleted; the strips beside it show every adjusted estimate of the difference from intact in the probability of severe loss. The table gives the raw rates for any storm pair, and the map follows the Charley cohort of Lee County into Ian, house by house.</p>
+
+  <div class="chart-block" id="chart"></div>
+
+  <p class="note">Two storm pairs, both ending in Ian, and associations only, not effects of repairing or replacing. A restored house returns to the vulnerability of the old stock around it; once adjusted, documented repair is not robustly different from intact structures. Replacement lowers the share of value lost in every estimate and does not lower the dollars.</p>
+</main>
+
+<div id="tooltip" class="tooltip" role="status" aria-live="polite"></div>
+
+<script type="module" src="js/pages/exposure.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# operating system and editor files
+Thumbs.db
+desktop.ini
+.DS_Store
+*.swp
+*~
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+
+# wrangler's local state
+.wrangler/
+
+# the earlier draft of the site, kept for reference, not deployed
+_archive/

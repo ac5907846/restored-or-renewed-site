@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Restored or Renewed?</title>
+<meta name="description" content="Interactive companion to a study of what happens to severely damaged houses after Florida hurricanes, 2004 to 2024: the renewal window, the redevelopment threshold, and the exposure each recovery path carries into the next storm.">
+<link rel="stylesheet" href="css/style.css?v=2">
+<link rel="preload" href="data/meta.json?v=2" as="fetch" crossorigin>
+<link rel="preload" href="data/overview.json?v=2" as="fetch" crossorigin>
+<link rel="modulepreload" href="js/shell.js?v=2">
+</head>
+<body>
+
+<a class="skip" href="#page">Skip to content</a>
+<header class="masthead" id="masthead">
+  <div class="masthead-inner">
+    <h1>Restored or Renewed?</h1>
+    <p class="subtitle">What happens to severely damaged houses after Florida hurricanes, 2004 to 2024, followed parcel by parcel through the annual assessment rolls</p>
+  </div>
+</header>
+<nav class="sitenav" id="sitenav" aria-label="Pages">
+  <div class="sitenav-inner">
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="storms.html">Sixteen storms</a></li>
+      <li><a href="renewal.html">Renewal window</a></li>
+      <li><a href="pathways.html">Pathways</a></li>
+      <li><a href="predictors.html">Redevelopment threshold</a></li>
+      <li><a href="lee.html">Next hurricane</a></li>
+      <li><a href="data.html">Data and methods</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main id="page" class="section hero">
+  <p class="standfirst">When does severe hurricane damage produce renewal of the housing stock, and when does it produce restoration of the stock that was there? The study follows every residential parcel in Florida’s hurricane-damaged counties through the annual assessment rolls from 2002 to 2026, across 16 storms, and observes for each severely damaged house whether the structure was kept, replaced or cleared, when, and, where a second hurricane followed, what that hurricane did to it. The picture below is the paper’s framework as the story of one lot; the tabs after the study area carry the results behind each frame.</p>
+
+  <div class="chart-block" id="chart"></div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="lineage">
+    <p>Every number on this site is read from the study’s analysis outputs by a build step that regenerates the data layer and prints the published values beside the ones the paper quotes; nothing is typed into a page.</p>
+    <p>The sources are public records: the Florida Department of Revenue’s annual assessment rolls, 2002 to 2026, and its sales files; FEMA’s Individuals and Households Program registrations and disaster declarations; HURDAT2 storm tracks; the statewide parcel layer; and two municipal permit records. The site shows aggregates, estimates and their intervals. No individual property record is published; the parcel map on the last results tab carries only a class, a year built and an outcome at 2025 centroid coordinates.</p>
+  </div>
+</main>
+
+<div id="tooltip" class="tooltip" role="status" aria-live="polite"></div>
+
+<script type="module" src="js/pages/overview.js?v=2"></script>
+</body>
+</html>
