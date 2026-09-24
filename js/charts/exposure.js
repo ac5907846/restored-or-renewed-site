@@ -1,11 +1,11 @@
-/* What each path exposes to the next hurricane (Figs. 6 and 7): the
+/* What each pathway exposed to the next hurricane (Figs. 6 and 7): the
    recovery plane, value exposed against the share of value deleted,
    each pathway as a ratio to intact structures of the same tracts;
    every adjusted estimate of the difference from intact in the
-   probability of severe loss; the raw rates of any storm pair; and the
-   Charley cohort of Lee County at Ian, house by house. */
+   probability of severe loss; and the Charley cohort of Lee County at
+   Ian, house by house. Raw rates and stakes live in the tooltips. */
 
-import { el, svg, clear, control, select, chips } from "../lib/dom.js";
+import { el, svg, clear, control, chips } from "../lib/dom.js";
 import { figure, axisX, axisY } from "../lib/chart.js";
 import { linear, log } from "../lib/scale.js";
 import { pathOf, projector, trackPath } from "../lib/geo.js";
@@ -30,20 +30,32 @@ function marker(cls, x, y, r) {
 export function exposureChart(host, app) {
   const meta = app.meta;
   const E = app.exposure;
-  const state = { pair: "charley_to_ian" };
+  const rate = (pair, cls) => E.rates.find((r) => r.pair === pair && r.class_key === cls);
+  const rob = (pair, cls) => E.robustness.find((r) => r.pair === pair && r.class_key === cls);
+  const stakes = (pair, cls) => E.stakes.find((r) => r.pair === pair && r.class_label === REC_LABEL[cls]);
+  const rateRows = (pair, cls) => {
+    const r = rate(pair, cls);
+    const i = rate(pair, "intact");
+    const out = [];
+    if (r && i) out.push([`Severe loss at ${meta.pairs[pair].split(" to ")[1]}, raw`, `${fmt.pct(r.y_published_per100 / 100, 1)} of ${fmt.count(r.n)}, against ${fmt.pct(i.y_published_per100 / 100, 1)} of ${fmt.count(i.n)} intact`]);
+    const b = rob(pair, cls);
+    if (b) out.push(["Adjusted difference from intact", `median ${fmt.num(100 * b.median, 1)} points; ${b.n_p_below_05} of ${b.n_specs} estimates at p < .05`]);
+    const s = stakes(pair, cls);
+    if (s) out.push(["Share of the stock, of severe losses, of value deleted", `${fmt.num(s.share_stock_pct, 2)}%, ${fmt.num(s.share_severe_pct, 2)}%, ${fmt.num(s.share_value_deleted_pct, 2)}%`]);
+    return out;
+  };
 
   const tourHost = el("div");
   const figA = el("div.figure");
   const figB = el("div.figure");
   const legend = el("div.legend");
-  const side = el("div.sidecard");
   const mapBar = el("div.controls");
   const figMap = el("div.figure");
   const mapLegend = el("div.legend");
   const cap = el("p.caption");
   clear(host).append(tourHost,
     el("div.panelgrid", { style: { gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 1fr)" } }, [el("div", {}, [figA, legend]), figB]),
-    el("div.panelgrid", { style: { marginTop: "1.2rem" } }, [el("div", {}, [mapBar, figMap, mapLegend]), side]),
+    el("div", { style: { marginTop: "1.4rem", paddingTop: "1rem", borderTop: "1px solid var(--rule-soft)" } }, [mapBar, figMap, mapLegend]),
     cap);
 
   const marks = new Map();
@@ -57,7 +69,7 @@ export function exposureChart(host, app) {
     const y = log([0.2, 4], [f.h, 0]);
     axisX(f, x, { values: [0.5, 1, 2, 4, 8], format: (v) => fmt.num(v, v < 1 ? 1 : 0), label: "Value exposed per structure, ratio to intact (log)" });
     axisY(f, y, { values: [0.25, 0.5, 1, 2, 4], format: (v) => fmt.num(v, v < 1 ? 2 : 0), label: "Share of value deleted, ratio to intact (log)" });
-    f.add(svg("text", { x: -58, y: -14, "font-size": 11, fill: INK, "font-weight": 600, text: "(a) Value exposed against the share of it lost, by pathway" }));
+    f.add(svg("text", { x: -58, y: -14, "font-size": 11, fill: INK, "font-weight": 600, text: "Value exposed against the share of it lost, by pathway" }));
     f.add(svg("line", { x1: 0, x2: f.w, y1: y(1), y2: y(1), stroke: MUTED, "stroke-dasharray": "3 2" }));
     f.add(svg("line", { x1: x(1), x2: x(1), y1: 0, y2: f.h, stroke: MUTED, "stroke-dasharray": "3 2" }));
     for (const d of [0.5, 1, 2]) {
@@ -74,8 +86,9 @@ export function exposureChart(host, app) {
       m.addEventListener("pointerenter", (e) => tip.show(e, {
         title: `${REC_LABEL[r.class_key]}, ${meta.pairs[r.pair]}`,
         rows: [["Value exposed, ratio to intact", fmt.num(r.ratio_value, 2)], ["Share of value deleted, ratio", fmt.num(r.ratio_vulnerability, 2)],
-          ["Dollars deleted per structure, ratio", fmt.num(r.ratio_dollars, 2)], ["Structures", `${fmt.count(r.n_class)} against ${fmt.count(r.n_intact)} intact`]],
-        note: "Intact structures of the same tracts, reweighted to the pathway’s tract mix.",
+          ["Dollars deleted per structure, ratio", fmt.num(r.ratio_dollars, 2)], ["Structures", `${fmt.count(r.n_class)} against ${fmt.count(r.n_intact)} intact`],
+          ...rateRows(r.pair, r.class_key)],
+        note: "Intact structures of the same tracts, reweighted to the pathway's tract mix; associations, not effects of repairing or replacing.",
       }));
       m.addEventListener("pointermove", tip.move);
       m.addEventListener("pointerleave", tip.hide);
@@ -86,7 +99,7 @@ export function exposureChart(host, app) {
     const sw = svg("svg", { width: 16, height: 16, viewBox: "0 0 16 16" }, [marker(c, 8, 8, 5)]);
     legend.appendChild(el("span.item", {}, [sw, el("span", { text: REC_LABEL[c] })]));
   }
-  legend.appendChild(el("span.item", { text: "Large marker: Charley 2004 to Ian 2022; small: Irma 2017 to Ian 2022. Intact structures sit at 1, 1." }));
+  legend.appendChild(el("span.item", { text: "Large marker: Charley 2004 to Ian 2022; small: Irma 2017 to Ian 2022; intact structures sit at 1, 1" }));
 
   /* (b) every adjusted estimate */
   {
@@ -101,67 +114,35 @@ export function exposureChart(host, app) {
     const vals = est.map((r) => 100 * r.estimate);
     const x = linear([Math.min(-6, Math.min(...vals) - 2), Math.max(...vals) + 2], [0, f.w]);
     axisX(f, x, { grid: true, format: (v) => fmt.num(v, 0), label: "Difference from intact, severe loss (points)" });
-    f.add(svg("text", { x: -128, y: -14, "font-size": 11, fill: INK, "font-weight": 600, text: "(b) Every adjusted estimate, one tick each" }));
+    f.add(svg("text", { x: -128, y: -14, "font-size": 11, fill: INK, "font-weight": 600, text: "Every adjusted estimate, one tick each" }));
     f.add(svg("line", { x1: x(0), x2: x(0), y1: 0, y2: f.h, stroke: INK, "stroke-width": 1 }));
     strips.forEach((s, i) => {
       const yc = i * ROWH + ROWH / 2;
       const col = REC[s.cls];
       f.add(reg(s.cls, svg("text", { x: -8, y: yc - 2, "text-anchor": "end", "font-size": 10, fill: INK, text: REC_LABEL[s.cls] })));
       f.add(reg(s.cls, svg("text", { x: -8, y: yc + 9, "text-anchor": "end", "font-size": 9, fill: MUTED, text: meta.pairs[s.pair] })));
-      if (i) f.add(svg("line", { x1: -150, x2: f.w, y1: i * ROWH, y2: i * ROWH, stroke: GRID }));
+      if (i) f.add(svg("line", { x1: -128, x2: f.w, y1: i * ROWH, y2: i * ROWH, stroke: GRID }));
       const sorted = s.rs.map((r) => 100 * r.estimate).sort((a, b) => a - b);
       const med = sorted[Math.floor(sorted.length / 2)];
       const sig = s.rs.filter((r) => r.p < 0.05).length;
       for (const r of s.rs) {
         const h = r.p < 0.05 ? 10 : 5;
-        const t = reg(s.cls, svg("line", { x1: x(100 * r.estimate), x2: x(100 * r.estimate), y1: yc + 4 - h, y2: yc + 4 + h, stroke: col, "stroke-width": 1.3 }));
+        f.add(reg(s.cls, svg("line", { x1: x(100 * r.estimate), x2: x(100 * r.estimate), y1: yc + 4 - h, y2: yc + 4 + h, stroke: col, "stroke-width": 1.3 })));
         const hit = svg("rect", { x: x(100 * r.estimate) - 3, y: yc - 10, width: 6, height: 26, fill: "transparent" });
         hit.addEventListener("pointerenter", (e) => tip.show(e, {
           title: `${REC_LABEL[s.cls]}, ${meta.pairs[s.pair]}`,
           rows: [["Estimate", `${fmt.num(100 * r.estimate, 1)} points`], ["Standard error", fmt.num(100 * r.se, 1)], ["p", fmt.pval(r.p)],
-            ["Design", r.design], ["Sample", r.sample], ["n", `${fmt.count(r.n)} (${fmt.count(r.n_treated)} in the class)`]],
+            ["Design", r.design], ["Sample", r.sample], ["n", `${fmt.count(r.n)} (${fmt.count(r.n_treated)} in the class)`], ...rateRows(s.pair, s.cls)],
         }));
         hit.addEventListener("pointermove", tip.move);
         hit.addEventListener("pointerleave", tip.hide);
-        f.add(t); f.add(hit);
+        f.add(hit);
       }
       f.add(reg(s.cls, marker(s.cls, x(med), yc - 10, 3.5)));
       f.add(reg(s.cls, svg("text", { x: f.w + 6, y: yc + 4, "font-size": 9.5, fill: MUTED, text: `${sig} of ${s.rs.length}` })));
     });
     f.add(svg("text", { x: f.w + 6, y: -4, "font-size": 8.5, fill: MUTED, text: "p < .05" }));
   }
-
-  /* side: raw rates of a storm pair */
-  const pairs = [...new Set(E.rates.map((r) => r.pair))].filter((p) => meta.pairs[p]);
-  function renderSide() {
-    clear(side);
-    side.appendChild(el("h4", { text: "Raw rates of severe loss at the second storm" }));
-    side.appendChild(control("Storm pair", select(pairs.map((p) => ({ key: p, label: meta.pairs[p] })), state.pair, (v) => { state.pair = v; renderSide(); })));
-    const rs = E.rates.filter((r) => r.pair === state.pair);
-    const tbl = el("table.dtable");
-    tbl.appendChild(el("thead", {}, [el("tr", {}, ["Pathway after the first storm", "n", "Severe loss"].map((t) => el("th", { text: t })))]));
-    const tb = el("tbody");
-    for (const c of ["intact", ...CLASSES]) {
-      const r = rs.find((q) => q.class_key === c);
-      if (!r) continue;
-      tb.appendChild(el("tr", {}, [
-        el("td", {}, [el("span.dot", { style: { background: c === "new_build" ? "#fff" : REC[c], border: c === "new_build" ? `1.5px solid ${REC[c]}` : "none" } }), ` ${c === "intact" ? "Intact old stock (the control)" : REC_LABEL[c]}`]),
-        el("td", { text: fmt.count(r.n) }), el("td", { text: fmt.pct(r.y_published_per100 / 100, 1) })]));
-    }
-    tbl.appendChild(tb);
-    side.appendChild(tbl);
-    const rob = E.robustness.filter((r) => r.pair === state.pair);
-    if (rob.length) {
-      const dr = rob.find((r) => r.class_key === "documented_repair");
-      const ld = rob.find((r) => r.class_key === "less_documented");
-      side.appendChild(el("p.note", { text: `Read the raw rates against the adjusted evidence, not on their own. ${ld ? `Less-documented recovery lies above intact in ${ld.n_positive} of ${ld.n_specs} estimates (${ld.n_p_below_05} at p < .05; median ${fmt.num(100 * ld.median, 1)} points).` : ""} ${dr ? `Documented repair reaches p < .05 in ${dr.n_p_below_05} of ${dr.n_specs}; without ${String(dr.loo_min_county_left_out).replace(/^\d+ /, "")} County the estimate is ${fmt.num(100 * dr.loo_min, 1)}. The supportable reading is that a restored house returns to the vulnerability of the old stock around it.` : ""}` }));
-    } else {
-      side.appendChild(el("p.note", { text: `${meta.pairs[state.pair]} carries no adjusted comparison with intact structures: the second storm damaged few of these counties, so the pair is descriptive only.` }));
-    }
-    const st = E.stakes.find((r) => r.pair === state.pair && r.row === "total");
-    if (st) side.appendChild(el("p.note", { text: `Stakes: the structures the first storm severely damaged were ${fmt.num(st.share_stock_pct, 2)}% of the stock the second storm met, ${fmt.num(st.share_severe_pct, 2)}% of its severe losses and ${fmt.num(st.share_value_deleted_pct, 2)}% of the improvement value it deleted.` }));
-  }
-  renderSide();
 
   /* the Lee County map of the Charley cohort at Ian */
   const L = E.lee;
@@ -189,9 +170,11 @@ export function exposureChart(host, app) {
       const node = svg("circle", { cx: x, cy: y, r: r.severe_ian ? 3 : 2, fill: r.severe_ian ? REC[cls] : "#fff", stroke: REC[cls], "stroke-width": .8, opacity: r.severe_ian ? 1 : .8 });
       if (!mapMarks.has(cls)) mapMarks.set(cls, []);
       mapMarks.get(cls).push(node);
-      node.addEventListener("pointerenter", (e) => tip.show(e, { title: REC_LABEL[cls], rows: [
+      node.addEventListener("pointerenter", (e) => tip.show(e, { title: `${REC_LABEL[cls]} after Charley`, rows: [
         ["Year built (2022 roll)", r.year_built ?? "n/a"], ["Mobile home", r.mobile ? "yes" : "no"],
-        ["Ian outcome", r.severe_ian ? "severe loss" : "no severe loss"], ["Ian deletion share", r.ian_del_share === null ? "n/a" : fmt.num(r.ian_del_share, 2)]] }));
+        ["Ian outcome", r.severe_ian ? "severe loss" : "no severe loss"], ["Ian deletion share", r.ian_del_share === null ? "n/a" : fmt.num(r.ian_del_share, 2)],
+        [`Lee County ${REC_LABEL[cls].toLowerCase()}`, `${fmt.count(L.summary[cls].n)} structures, ${fmt.pct(L.summary[cls].rate, 0)} severe in Ian`],
+        ["Intact old stock of the pair's counties", `${fmt.count(L.intact_pair_n)} structures, ${fmt.pct(L.intact_pair_rate, 1)} severe in Ian`]] }));
       node.addEventListener("pointermove", tip.move);
       node.addEventListener("pointerleave", tip.hide);
       g.appendChild(node);
@@ -206,21 +189,21 @@ export function exposureChart(host, app) {
     el("span.item", {}, [el("span.dot", { style: { background: "#fff", border: `1px solid ${INK}` } }), " Open: no severe loss"]),
     el("span.item", {}, [el("span.swatch", { style: { background: GRAY_DARK } }), " Charley track"]),
     el("span.item", {}, [el("span.swatch", { style: { background: INK } }), " Ian track"]),
-    el("span.item", { text: `Intact old stock of the pair’s counties: ${fmt.count(L.intact_pair_n)} structures, ${fmt.pct(L.intact_pair_rate, 1)} severe in Ian. Lee’s cohort lines the barrier islands and the Caloosahatchee mouth, where Ian’s surge was highest, which is why the adjusted estimates compare within tracts.` }),
   );
 
-  cap.textContent = "Site-built structures with an improvement value in the counties the second storm damaged, against the intact structures of the same tracts, reweighted to each pathway’s tract mix; the unit is the structure, not the own-lot house of the other tabs. Panel (b) holds linear probability models with tract fixed effects or matched strata, over four samples and with each county left out in turn, errors clustered by tract. A point below the dashed horizontal line in (a) loses a smaller share of its value than intact structures, and a point below the diagonal at intact’s level fewer dollars per structure. Map coordinates are 2025 parcel centroids.";
+  cap.textContent = "Site-built structures in the counties the second storm damaged against the intact structures of the same tracts, two storm pairs both ending in Ian, associations only; a restored house returns to the vulnerability of the old stock around it, and a replacement loses a smaller share of more value.";
 
-  /* tour */
   function light(cls) {
     for (const [c, nodes] of marks) for (const n of nodes) n.classList.toggle("dim", cls !== null && !cls.includes(c));
     for (const [c, nodes] of mapMarks) for (const n of nodes) n.classList.toggle("dim", cls !== null && !cls.includes(c));
   }
   const ov = app.overview.consequence;
   const r = app.overview.rates.charley_to_ian;
+  const ld = rob("charley_to_ian", "less_documented");
+  const dr = rob("charley_to_ian", "documented_repair");
   const steps = [
-    { cap: `Less-documented recovery: ${fmt.pct(r.less_documented.rate, 1)} severe in Ian against ${fmt.pct(r.intact.rate, 1)} of the intact old stock, above intact in every estimate`, ms: 3000, run: (c) => { light(["less_documented"]); return c.sleep(3000); } },
-    { cap: `Documented repair: ${fmt.pct(r.documented_repair.rate, 1)} raw, not robustly different from intact once adjusted`, ms: 3000, run: (c) => { light(["documented_repair"]); return c.sleep(3000); } },
+    { cap: `Less-documented recovery: ${fmt.pct(r.less_documented.rate, 1)} severe in Ian against ${fmt.pct(r.intact.rate, 1)} of the intact old stock, above intact in ${ld ? `${ld.n_positive} of ${ld.n_specs}` : "every"} estimate${ld ? "s" : ""}`, ms: 3000, run: (c) => { light(["less_documented"]); return c.sleep(3000); } },
+    { cap: `Documented repair: ${fmt.pct(r.documented_repair.rate, 1)} raw, p < .05 in ${dr ? `${dr.n_p_below_05} of ${dr.n_specs}` : "few"} adjusted estimates: back at the old stock's risk`, ms: 3000, run: (c) => { light(["documented_repair"]); return c.sleep(3000); } },
     { cap: `Replaced and new build: ${fmt.num(ov.vulnerability[0], 2)} to ${fmt.num(ov.vulnerability[1], 2)} of the intact share lost, on ${fmt.num(ov.value[0], 1)} to ${fmt.num(ov.value[1], 1)} times the value`, ms: 3200, run: (c) => { light(["replaced", "new_build"]); return c.sleep(3200); } },
     { cap: `Dollars deleted per structure: ${fmt.num(ov.dollars[0], 2)} to ${fmt.num(ov.dollars[1], 2)} times intact, so dollar losses do not necessarily fall`, ms: 2600, run: (c) => { light(["replaced", "new_build"]); return c.sleep(2600); } },
     { cap: "Every pathway", ms: 1800, run: (c) => { light(null); return c.sleep(1800); } },

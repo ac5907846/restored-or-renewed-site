@@ -19,7 +19,7 @@ Hosted on Cloudflare Pages as project `restored-or-renewed`
 once the DNS record `housing CNAME restored-or-renewed.pages.dev`,
 proxied, exists in the electriai.com zone). To publish a change:
 rebuild the data layer, bump `VERSION` in `js/shell.js` and the `?v=`
-query on the assets in the seven HTML files, test, commit, then
+query on the assets in the four HTML files, test, commit, then
 
 ```
 py -3 tools/deploy.py
@@ -57,26 +57,24 @@ the Paper 1 site. No number is typed into a page.
 
 ## Pages
 
-The seven pages follow the paper: the framework, the study area, then
-its three tiers (shock, mechanism, consequence) with the pathways page
-between the first two, then the data.
+Four tabs, each one chart block with a one-line title and at most one
+sentence under it; every other number lives in the hover tooltips and
+the tour captions. The study area first, then the paper's three tiers.
 
 | File | Tab | Paper item | Reads |
 |---|---|---|---|
-| `index.html` | Overview | Fig. 1 as an autoplaying storyboard, the three tiers | `overview.json` |
-| `storms.html` | Sixteen storms | Fig. 2 | `storms.json`, `geo/` |
-| `renewal.html` | Renewal window | Fig. 3 | `window.json`, `overview.json` |
-| `pathways.html` | Pathways | Fig. 4, Fig. S6, Table S3 | `pathways.json` |
-| `predictors.html` | Redevelopment threshold | Fig. 5, Table 2, Table S5 | `threshold.json`, `overview.json` |
-| `lee.html` | Next hurricane | Fig. 6, Fig. 7, Table 3 and the Lee County map | `exposure.json`, `overview.json`, `geo/` |
-| `data.html` | Data and methods | Sources, gates, counts, outside checks | `methods.json` |
+| `index.html` | Sixteen storms | Fig. 2 as a storm map in the series' style (county fill, severe-loss circles, track and landfall, damage counties), with the data register in one line at the foot | `storms.json`, `geo/` |
+| `renewal.html` | Renewal window | Fig. 3 (hazard, cumulative exit, timing) and Fig. 4 (what stands on the lot by vintage band) | `window.json`, `pathways.json`, `overview.json` |
+| `threshold.html` | Redevelopment threshold | Fig. 5 (the index curve, the value-left by land-share plane, replaced or cleared); Table 2 and the income check in the tooltips | `threshold.json`, `overview.json` |
+| `exposure.html` | Next storm | Fig. 6 (the recovery plane and every adjusted estimate) and Fig. 7 (raw rates and stakes in the tooltips), with the Lee County map of the Charley cohort at Ian | `exposure.json`, `overview.json`, `geo/` |
 
-Each results page opens with a short guided tour that plays by itself
+Each page opens with a short guided tour that plays by itself
 (`js/lib/tour.js`): any click, key, wheel or touch pauses it and the
 Play/Pause button resumes it; reduced-motion settings skip it. The
 masthead and tab bar are static markup, so the frame paints before the
 data arrives; `js/shell.js` holds the `PAGES` array, marks the active
 tab and loads only the files a page declares in `js/pages/<id>.js`.
+The seven-tab version of 2026-09-23 is in `_archive/2026-09-24_seven_tabs/`.
 
 ## Testing without a browser session
 

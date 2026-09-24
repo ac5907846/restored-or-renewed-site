@@ -8,27 +8,20 @@
 import { el, clear, $ } from "./lib/dom.js";
 import * as fmt from "./lib/format.js";
 
-export const VERSION = "2";
+export const VERSION = "3";
 
-/* The site map, in tab order: the overview, the study area, then the
-   paper's three tiers (the renewal window, the pathways it produces,
-   the redevelopment threshold behind them, the next-storm exposure),
-   then the data and methods. */
+/* The site map, in tab order: the study area, then the paper's three
+   tiers (the renewal window, the redevelopment threshold, the
+   next-storm exposure). */
 export const PAGES = [
-  { id: "overview", file: "index.html", tab: "Overview",
-    title: "Restored or renewed?" },
-  { id: "storms", file: "storms.html", tab: "Sixteen storms",
+  { id: "storms", file: "index.html", tab: "Sixteen storms",
     title: "Sixteen hurricanes on the assessment rolls" },
   { id: "window", file: "renewal.html", tab: "Renewal window",
-    title: "The renewal window: exit from the stock, roll by roll" },
-  { id: "pathways", file: "pathways.html", tab: "Pathways",
-    title: "What stands on the lot: the recovery pathways" },
-  { id: "threshold", file: "predictors.html", tab: "Redevelopment threshold",
-    title: "Which houses leave: the redevelopment threshold" },
-  { id: "exposure", file: "lee.html", tab: "Next hurricane",
-    title: "What each path exposes to the next hurricane" },
-  { id: "data", file: "data.html", tab: "Data and methods",
-    title: "Data and methods" },
+    title: "Exit from the stock, roll by roll, and what stands on the lot" },
+  { id: "threshold", file: "threshold.html", tab: "Redevelopment threshold",
+    title: "Exit against the structure value left over the value of the lot" },
+  { id: "exposure", file: "exposure.html", tab: "Next storm",
+    title: "What each pathway exposed to the next hurricane" },
 ];
 
 const FILES = {

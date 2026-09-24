@@ -4,6 +4,6 @@ import { windowChart } from "../charts/window.js";
 
 boot({
   id: "window",
-  needs: ["window", "overview"],
+  needs: ["window", "pathways", "overview"],
   mount(app) { windowChart($("#chart"), app); },
 });

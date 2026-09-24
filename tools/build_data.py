@@ -31,7 +31,7 @@ A = ROOT / "02_analysis"
 DATA = APP / "data"
 
 sys.path.insert(0, str(A))
-from _shared.constants import REC, REC_LABEL  # noqa: E402
+from _shared.constants import REC, REC_LABEL, STORM_STYLE  # noqa: E402
 
 STORM_NAMES = {
     "charley_2004": "Charley 2004", "frances_2004": "Frances 2004",
@@ -372,6 +372,7 @@ def main():
                     "2004 to 2024, followed parcel by parcel through the annual assessment rolls",
         "storms": STORM_NAMES, "pairs": PAIRS,
         "classes": {k: {"label": REC_LABEL[k], "color": REC[k]} for k in REC},
+        "storm_colors": {k: STORM_STYLE[k]["color"] if k in STORM_STYLE else "#8c8c8c" for k in STORM_NAMES},
     })
     dump("overview.json", build_overview())
     dump("window.json", build_window())
