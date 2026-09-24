@@ -329,6 +329,7 @@ def build_storms():
     cmd = rd("a13_florida_map", "county_map_data.csv", dtype={"county_fips": str})
     tot = rd("a13_florida_map", "storm_totals.csv")
     trk = rd("a08_storm_catalog", "tracks.csv")
+    land = storms.set_index("storm")["fl_landfall_time"].to_dict()
     tracks = {}
     for key, g in trk.groupby("storm"):
         g = g.sort_values("time")
@@ -336,6 +337,9 @@ def build_storms():
                        "lat": [round(float(v), 2) for v in g["lat"]],
                        "vmax": [float(v) for v in g["vmax"]],
                        "time": list(g["time"])}
+        hit = g[g["time"] == land.get(key)]
+        if len(hit):
+            tracks[key]["landfall"] = [round(float(hit["lon"].iloc[0]), 2), round(float(hit["lat"].iloc[0]), 2)]
     return {
         "catalog": records(storms.round(2)),
         "county": records(cmd.round(3)),

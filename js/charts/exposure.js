@@ -6,9 +6,9 @@
    Ian, house by house. Raw rates and stakes live in the tooltips. */
 
 import { el, svg, clear, control, chips } from "../lib/dom.js";
-import { figure, axisX, axisY } from "../lib/chart.js";
+import { figure, axisX, axisY, hurricaneGlyph } from "../lib/chart.js";
 import { linear, log } from "../lib/scale.js";
-import { pathOf, projector, trackPath } from "../lib/geo.js";
+import { pathOf, projector, smoothTrackPath, runsInside } from "../lib/geo.js";
 import * as fmt from "../lib/format.js";
 import { INK, MUTED, GRID, RULE, LAND, REC, REC_LABEL, GRAY_DARK } from "../lib/palette.js";
 import * as tip from "../lib/tooltip.js";
@@ -159,9 +159,30 @@ export function exposureChart(host, app) {
     f.add(g);
     g.appendChild(svg("rect", { x: 0, y: 0, width: f.w, height: f.h, fill: "#f4f6f8" }));
     for (const c of counties) g.appendChild(svg("path", { d: pathOf(c.rings, project), fill: LAND, stroke: "#fff", "stroke-width": .8 }));
-    for (const [key, color] of [["charley_2004", GRAY_DARK], ["ian_2022", INK]]) {
+    const wide = [BBOX[0] - 1.5, BBOX[1] + 1.5, BBOX[2] - 1.5, BBOX[3] + 1.5];
+    /* both storms landed on the same island, so each symbol sits a fixed
+       distance back along its own approach, where the two tracks differ */
+    for (const [key, color, back, dx, dy] of [["charley_2004", GRAY_DARK, 150, 12, 14], ["ian_2022", INK, 150, -14, -10]]) {
       const t = app.geo.tracks[key];
-      if (t) g.appendChild(svg("path", { d: trackPath(t.lon, t.lat, project), fill: "none", stroke: color, "stroke-width": 1.6, "stroke-dasharray": key === "charley_2004" ? "5 3" : null }));
+      if (!t) continue;
+      for (const run of runsInside(t, wide)) {
+        const d = smoothTrackPath(run.map((k) => t.lon[k]), run.map((k) => t.lat[k]), project);
+        g.appendChild(svg("path", { d, fill: "none", stroke: "#fff", "stroke-width": 4, opacity: .8 }));
+        const line = svg("path", { d, fill: "none", stroke: color, "stroke-width": 1.6, "stroke-dasharray": key === "charley_2004" ? "5 3" : null });
+        g.appendChild(line);
+        const len = line.getTotalLength();
+        let at = len * 0.4;
+        if (t.landfall) {
+          const [lx, ly] = project(t.landfall[0], t.landfall[1]);
+          let best = Infinity;
+          for (let L = 0; L <= len; L += 3) { const q = line.getPointAtLength(L); const dd = (q.x - lx) ** 2 + (q.y - ly) ** 2; if (dd < best) { best = dd; at = L; } }
+          at = Math.max(20, at - back);
+        }
+        const q = line.getPointAtLength(at);
+        g.appendChild(hurricaneGlyph(q.x, q.y, 13, color));
+        g.appendChild(svg("text", { x: q.x + dx, y: q.y + dy, "text-anchor": dx < 0 ? "end" : "start", "font-size": 10.5, fill: color, "font-weight": 600,
+          stroke: "#fff", "stroke-width": 3, "paint-order": "stroke", text: meta.storms[key] }));
+      }
     }
     const shown = rows.filter((r) => selected.has(L.classes[r.class])).sort((a, b) => a.severe_ian - b.severe_ian);
     for (const r of shown) {

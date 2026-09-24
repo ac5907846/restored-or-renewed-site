@@ -821,3 +821,14 @@ h4.algo {
 @media (max-width: 640px) {
   .hero-read { grid-template-columns: 1fr 1fr; gap: .8rem; }
 }
+
+/* ------------------------------------------------ storm maps */
+
+.eye-spin { animation: eyespin 1.6s linear infinite; transform-origin: 0 0; }
+@keyframes eyespin { to { transform: rotate(-360deg); } }
+.county { transition: fill .45s ease; }
+.county-circle { transition: opacity .45s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .eye-spin { animation: none; }
+  .county, .county-circle { transition: none; }
+}

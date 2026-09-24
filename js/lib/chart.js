@@ -147,3 +147,20 @@ export function haloText(attrs) {
   }));
   return g;
 }
+
+/** The hurricane symbol of the paper's figures: a filled disc with two
+    spiral arms, spinning by CSS unless motion is reduced. */
+export function hurricaneGlyph(cx, cy, size, color) {
+  const s = size;
+  const arm = (sign) => `M0,${-0.28 * s * sign} C${0.55 * s * sign},${-0.35 * s * sign} ${0.75 * s * sign},${0.15 * s * sign} ${0.62 * s * sign},${0.62 * s * sign}`
+    + ` C${0.7 * s * sign},${0.2 * s * sign} ${0.45 * s * sign},${-0.05 * s * sign} ${0.2 * s * sign},${-0.1 * s * sign}Z`;
+  return svg("g", { class: "eye", transform: `translate(${cx.toFixed(1)},${cy.toFixed(1)})`, "pointer-events": "none" }, [
+    svg("circle", { r: 0.62 * s + 5, fill: color, opacity: 0.12 }),
+    svg("g", { class: "eye-spin" }, [
+      svg("path", { d: arm(1), fill: color, opacity: 0.92 }),
+      svg("path", { d: arm(-1), fill: color, opacity: 0.92 }),
+      svg("circle", { r: 0.3 * s, fill: color }),
+      svg("circle", { r: 0.12 * s, fill: "#fff" }),
+    ]),
+  ]);
+}
