@@ -15,13 +15,20 @@ author, no affiliation) and does not name the journal.
 GitHub: <https://github.com/ac5907846/restored-or-renewed-site>.
 Hosted on Cloudflare Pages as project `restored-or-renewed`
 (<https://restored-or-renewed.pages.dev>, custom domain
-<https://housing.electriai.com>). To publish a change: rebuild the data
-layer, bump `VERSION` in `js/shell.js` and the `?v=` query on the
-assets in the seven HTML files, test, commit, then
+<https://housing.electriai.com>, attached to the project; it resolves
+once the DNS record `housing CNAME restored-or-renewed.pages.dev`,
+proxied, exists in the electriai.com zone). To publish a change:
+rebuild the data layer, bump `VERSION` in `js/shell.js` and the `?v=`
+query on the assets in the seven HTML files, test, commit, then
 
 ```
-npx wrangler pages deploy . --project-name restored-or-renewed --branch main
+py -3 tools/deploy.py
 ```
+
+which exports the last commit to a temporary folder and runs
+`npx wrangler pages deploy <folder> --project-name restored-or-renewed --branch main`,
+so the deployment holds exactly the committed files (deploying `.`
+directly would also upload `_archive/`).
 
 ## Run it
 

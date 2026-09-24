@@ -143,9 +143,9 @@ export function heroChart(host, app) {
       top += h;
       if (p.key === "restored") g.appendChild(house(x1 + 14, yc - 24, 44, 36, RESTORED_INK));
       if (p.key === "replaced") g.appendChild(house(x1 + 10, yc - 30, 44 * (1 + area), 36 * (1 + area), REC.replaced));
-      g.appendChild(lot(x1 + 8, yc + 14, 66));
-      g.appendChild(label(x1 + 82, yc + 2, fmt.pct(p.share, 0), { fill: p.color === REC.cleared ? MUTED : p.color, size: 12, weight: 600 }));
-      g.appendChild(label(x1 + 82, yc + 14, p.text, { size: 9 }));
+      g.appendChild(lot(x1 + 8, yc + 14, 62));
+      g.appendChild(label(x1 + 80, yc + 4, fmt.pct(p.share, 0), { fill: p.color === REC.cleared ? MUTED : p.color, size: 12, weight: 600 }));
+      g.appendChild(label(x1 + 80, yc + 18, p.text, { size: 9 }));
     }
     g.appendChild(svg("rect", { x: x0 - 8, y: 58, width: 8, height: total, fill: PINK, opacity: .35 }));
     g.appendChild(label(x + 8, 250, "Severely damaged own-lot houses of", { size: 10 }));
