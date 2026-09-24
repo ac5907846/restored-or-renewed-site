@@ -68,9 +68,19 @@ the tour captions. The study area first, then the paper's three tiers.
 | `threshold.html` | Redevelopment threshold | Fig. 5 (the index curve, the value-left by land-share plane, replaced or cleared); Table 2 and the income check in the tooltips | `threshold.json`, `overview.json` |
 | `exposure.html` | Next storm | Fig. 6 (the recovery plane and every adjusted estimate) and Fig. 7 (raw rates and stakes in the tooltips), with the Lee County map of the Charley cohort at Ian | `exposure.json`, `overview.json`, `geo/` |
 
-Each page opens with a short guided tour that plays by itself
-(`js/lib/tour.js`): any click, key, wheel or touch pauses it and the
-Play/Pause button resumes it; reduced-motion settings skip it. The
+The site plays itself (`js/lib/tour.js`): the landing page's tour starts
+on arrival, and when a page's tour ends the site moves to the next tab
+and runs that tour, through all four tabs, then starts over; the lap
+counter and the position travel in `sessionStorage`, the first lap runs
+at double speed and later laps at normal speed. Any click, key, wheel or
+touch pauses the lap and the Play/Pause button resumes it; a page opened
+by hand while paused stays paused; reduced-motion settings skip it all.
+The storm map draws the tracks as the paper's Fig. 2 does: HURDAT2
+fixes within the figure's frame (-88.7, -78.0, 24.3, 31.2) plus a 2
+degree margin, split where a storm leaves and returns, only the pass
+that made the landfall, a centripetal Catmull-Rom curve through the
+fixes, the symbol resting at the landfall of `a13 storm_labels.csv` and
+an open circle for a storm that did not land. The
 masthead and tab bar are static markup, so the frame paints before the
 data arrives; `js/shell.js` holds the `PAGES` array, marks the active
 tab and loads only the files a page declares in `js/pages/<id>.js`.

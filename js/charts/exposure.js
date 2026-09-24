@@ -8,7 +8,7 @@
 import { el, svg, clear, control, chips } from "../lib/dom.js";
 import { figure, axisX, axisY, hurricaneGlyph } from "../lib/chart.js";
 import { linear, log } from "../lib/scale.js";
-import { pathOf, projector, smoothTrackPath, runsInside } from "../lib/geo.js";
+import { pathOf, projector, smoothTrackPath, trackPieces, mainPass } from "../lib/geo.js";
 import * as fmt from "../lib/format.js";
 import { INK, MUTED, GRID, RULE, LAND, REC, REC_LABEL, GRAY_DARK } from "../lib/palette.js";
 import * as tip from "../lib/tooltip.js";
@@ -150,6 +150,7 @@ export function exposureChart(host, app) {
   const selected = new Set(CLASSES);
   const counties = app.geo.counties.filter((c) => ["12071", "12015", "12021", "12051", "12043", "12027"].includes(c.fips));
   const project = projector(BBOX, 720, 420, 6);
+  window.__projection = { bbox: BBOX, w: 720, h: 420, pad: 6, frame: BBOX };
   const mapMarks = new Map();
   function drawMap() {
     mapMarks.clear();
@@ -159,16 +160,16 @@ export function exposureChart(host, app) {
     f.add(g);
     g.appendChild(svg("rect", { x: 0, y: 0, width: f.w, height: f.h, fill: "#f4f6f8" }));
     for (const c of counties) g.appendChild(svg("path", { d: pathOf(c.rings, project), fill: LAND, stroke: "#fff", "stroke-width": .8 }));
-    const wide = [BBOX[0] - 1.5, BBOX[1] + 1.5, BBOX[2] - 1.5, BBOX[3] + 1.5];
+    window.__projection.margin = 1.5;
     /* both storms landed on the same island, so each symbol sits a fixed
        distance back along its own approach, where the two tracks differ */
     for (const [key, color, back, dx, dy] of [["charley_2004", GRAY_DARK, 150, 12, 14], ["ian_2022", INK, 150, -14, -10]]) {
       const t = app.geo.tracks[key];
       if (!t) continue;
-      for (const run of runsInside(t, wide)) {
+      for (const run of mainPass(t, trackPieces(t, BBOX, 1.5))) {
         const d = smoothTrackPath(run.map((k) => t.lon[k]), run.map((k) => t.lat[k]), project);
         g.appendChild(svg("path", { d, fill: "none", stroke: "#fff", "stroke-width": 4, opacity: .8 }));
-        const line = svg("path", { d, fill: "none", stroke: color, "stroke-width": 1.6, "stroke-dasharray": key === "charley_2004" ? "5 3" : null });
+        const line = svg("path", { d, fill: "none", stroke: color, "stroke-width": 1.6, "stroke-dasharray": key === "charley_2004" ? "5 3" : null, "data-track": key });
         g.appendChild(line);
         const len = line.getTotalLength();
         let at = len * 0.4;
@@ -179,7 +180,9 @@ export function exposureChart(host, app) {
           at = Math.max(20, at - back);
         }
         const q = line.getPointAtLength(at);
-        g.appendChild(hurricaneGlyph(q.x, q.y, 13, color));
+        const eye = hurricaneGlyph(q.x, q.y, 13, color);
+        eye.setAttribute("data-eye", key);
+        g.appendChild(eye);
         g.appendChild(svg("text", { x: q.x + dx, y: q.y + dy, "text-anchor": dx < 0 ? "end" : "start", "font-size": 10.5, fill: color, "font-weight": 600,
           stroke: "#fff", "stroke-width": 3, "paint-order": "stroke", text: meta.storms[key] }));
       }

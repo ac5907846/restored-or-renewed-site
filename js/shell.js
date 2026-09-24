@@ -8,7 +8,7 @@
 import { el, clear, $ } from "./lib/dom.js";
 import * as fmt from "./lib/format.js";
 
-export const VERSION = "4";
+export const VERSION = "5";
 
 /* The site map, in tab order: the study area, then the paper's three
    tiers (the renewal window, the redevelopment threshold, the

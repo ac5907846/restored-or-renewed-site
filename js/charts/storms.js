@@ -10,15 +10,20 @@
 
 import { el, svg, clear, control, segmented, select } from "../lib/dom.js";
 import { figure, hurricaneGlyph } from "../lib/chart.js";
-import { boundsOf, centroid, pathOf, projector, smoothTrackPath, runsInside } from "../lib/geo.js";
+import { centroid, pathOf, projector, smoothTrackPath, trackPieces, mainPass } from "../lib/geo.js";
 import * as fmt from "../lib/format.js";
 import { INK, LAND, MUTED, NODATA, PINK, NAVY } from "../lib/palette.js";
 import * as tip from "../lib/tooltip.js";
-import { tour, reduced } from "../lib/tour.js";
+import { tour, reduced, speed } from "../lib/tour.js";
 
 const MW = 640;
-const MH = 600;
+const MH = 480;
 const ANIM_MS = 2000;
+/* the frame of the paper's Fig. 2, with the neighboring states, so the
+   Alabama landfalls of Ivan and Sally and the approaches from the east
+   are inside the map; tracks keep the figure's 2 degree margin */
+const BBOX = [-88.7, -78.0, 24.3, 31.2];
+const TRACK_MARGIN = 2;
 const hex = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
 const mix = (a, b, t) => "#" + a.map((v, i) => Math.round(v + (b[i] - v) * t).toString(16).padStart(2, "0")).join("");
 const sequential = (t) => mix(hex("#dce6f0"), hex(NAVY), Math.max(0, Math.min(1, t)));
@@ -53,7 +58,10 @@ const TERMS = {
 export function stormsChart(host, app) {
   const meta = app.meta;
   const catalog = app.storms.catalog.slice().sort((a, b) => a.season - b.season || a.fl_landfall_time.localeCompare(b.fl_landfall_time));
-  const state = { storm: "ian_2022", fill: "excess_substantial_per100", circle: "n_substantial", pinned: null, anim: null };
+  const q = new URLSearchParams(location.search);
+  const still = q.get("still") === "1";
+  const state = { storm: app.storms.catalog.some((s) => s.storm === q.get("storm")) ? q.get("storm") : "ian_2022",
+    fill: "excess_substantial_per100", circle: "n_substantial", pinned: null, anim: null };
   const color = (k) => meta.storm_colors[k] || "#8c8c8c";
 
   const tourHost = el("div");
@@ -70,15 +78,8 @@ export function stormsChart(host, app) {
   bar.appendChild(control("County fill", select(Object.entries(FILLS).map(([k, v]) => ({ key: k, label: v.label })), state.fill, (v) => { state.fill = v; draw(false); })));
   bar.appendChild(control("Circles", select(Object.entries(CIRCLES).map(([k, v]) => ({ key: k, label: v[0].toUpperCase() + v.slice(1) })), state.circle, (v) => { state.circle = v; draw(false); })));
 
-  const project = projector(pad2(boundsOf(app.geo.counties)), MW, MH, 10);
-  function pad2([a, b, c, d]) {
-    const px = (b - a) * 0.04;
-    const py = (d - c) * 0.04;
-    return [a - px, b + px, c - py, d + py];
-  }
-  /* the track is drawn only where the frame can show it, so the symbol
-     ends its run at the edge of the map, not beyond it */
-  const visible = pad2(pad2(boundsOf(app.geo.counties)));
+  const project = projector(BBOX, MW, MH, 10);
+  window.__projection = { bbox: BBOX, w: MW, h: MH, pad: 10, frame: BBOX, margin: TRACK_MARGIN };
   const centers = new Map(app.geo.counties.map((c) => [c.fips, project(...centroid(c.rings))]));
   const rowsOf = () => {
     const m = new Map();
@@ -151,41 +152,46 @@ export function stormsChart(host, app) {
       }
     }
 
-    /* the track: one smooth curve per run of fixes inside the frame */
+    /* the track: one smooth curve per piece of fixes inside the frame plus
+       the figure's margin; a storm that leaves and returns gives two pieces */
     const trk = app.geo.tracks[state.storm];
-    const runs = trk ? runsInside(trk, visible) : [];
+    const pieces = trk ? mainPass(trk, trackPieces(trk, BBOX, TRACK_MARGIN)) : [];
     const paths = [];
-    for (const run of runs) {
+    for (const run of pieces) {
       const d = smoothTrackPath(run.map((k) => trk.lon[k]), run.map((k) => trk.lat[k]), project);
       const halo = f.add(svg("path", { d, fill: "none", stroke: "#fff", "stroke-width": 5, opacity: 0.85, "pointer-events": "none" }));
-      const line = f.add(svg("path", { d, fill: "none", stroke: col, "stroke-width": 2, "pointer-events": "none" }));
+      const line = f.add(svg("path", { d, fill: "none", stroke: col, "stroke-width": 2, "pointer-events": "none", "data-track": state.storm }));
       paths.push({ halo, line, len: line.getTotalLength() });
     }
     const totalLen = paths.reduce((a, p) => a + p.len, 0);
+    /* the landfall of the paper's Fig. 2: the symbol rests there; a storm
+       that did not land gets an open circle at its fix nearest the coast */
+    const landed = trk && trk.landfall && trk.landfall_source !== "strongest_fix_in_box";
     let landfallLen = null;
+    let landPt = null;
     if (trk && trk.landfall && paths.length) {
-      /* the point along the drawn track nearest the landfall fix */
       const [lx, ly] = project(trk.landfall[0], trk.landfall[1]);
+      landPt = [lx, ly];
       let best = Infinity;
       let acc = 0;
       for (const p of paths) {
-        for (let L = 0; L <= p.len; L += 3) {
+        for (let L = 0; L <= p.len; L += 2) {
           const q = p.line.getPointAtLength(L);
           const dd = (q.x - lx) ** 2 + (q.y - ly) ** 2;
           if (dd < best) { best = dd; landfallLen = acc + L; }
         }
         acc += p.len;
       }
-      const ring = svg("g", { class: "landfall", style: { cursor: "default" } }, [
-        svg("circle", { cx: lx, cy: ly, r: 7, fill: "none", stroke: col, "stroke-width": 2.2 }),
-        svg("circle", { cx: lx, cy: ly, r: 2, fill: col }),
-      ]);
-      ring.addEventListener("mousemove", (ev) => tip.show(ev, { title: `${s.name} ${s.season}`,
-        rows: [[s.landfall_source === "landfall_record" ? "Strongest Florida landfall" : "Nearest fix to the coast (no landfall)", `${fmt.dateLabel(s.fl_landfall_time)}, ${fmt.num(s.fl_landfall_vmax_kt, 0)} kt`],
-          ["Peak intensity", `${fmt.num(s.peak_vmax_kt, 0)} kt`], ["FEMA declaration", `DR-${String(s.disaster_numbers).split(";")[0]}`]] }));
-      ring.addEventListener("mouseleave", tip.hide);
-      f.add(ring);
-      paths.ring = ring;
+      if (!landed) {
+        const ring = svg("g", { class: "landfall", style: { cursor: "default" } }, [
+          svg("circle", { cx: lx, cy: ly, r: 7, fill: "#fff", "fill-opacity": .7, stroke: col, "stroke-width": 2 }),
+        ]);
+        ring.addEventListener("mousemove", (ev) => tip.show(ev, { title: `${s.name} ${s.season}: closest approach, no Florida landfall`,
+          rows: [["Fix nearest the coast", `${fmt.dateLabel(trk.landfall_time.slice(0, 16))}, ${fmt.num(trk.landfall_vmax_kt, 0)} kt`], ["FEMA declaration", `DR-${String(s.disaster_numbers).split(";")[0]}`]] }));
+        ring.addEventListener("mouseleave", tip.hide);
+        f.add(ring);
+        paths.ring = ring;
+      }
     }
     /* where along the track each county is reached: the length at which
        the track passes nearest its centroid */
@@ -205,6 +211,14 @@ export function stormsChart(host, app) {
       }
     }
     const glyph = paths.length ? f.add(hurricaneGlyph(0, 0, 16, col)) : null;
+    if (glyph && trk.landfall) {
+      glyph.removeAttribute("pointer-events");
+      glyph.style.cursor = "default";
+      glyph.addEventListener("mousemove", (ev) => tip.show(ev, { title: `${s.name} ${s.season}`,
+        rows: [[landed ? "Strongest Florida landfall" : "Fix nearest the coast (no landfall)", `${fmt.dateLabel(trk.landfall_time.slice(0, 16))}, ${fmt.num(trk.landfall_vmax_kt, 0)} kt`],
+          ["Hours over Florida land", fmt.num(trk.hours_over_land, 1)], ["FEMA declaration", `DR-${String(s.disaster_numbers).split(";")[0]}`]] }));
+      glyph.addEventListener("mouseleave", tip.hide);
+    }
 
     function pointAt(L) {
       let acc = 0;
@@ -227,8 +241,12 @@ export function stormsChart(host, app) {
         acc += p.len;
       }
       if (glyph) {
-        const q = pointAt(L);
+        /* the symbol travels to the landfall and rests there while the track
+           goes on drawing past it; a storm that did not land keeps the open circle */
+        const stop = landfallLen === null ? totalLen : landfallLen;
+        const q = landPt && landed && L >= stop ? { x: landPt[0], y: landPt[1] } : pointAt(Math.min(L, stop));
         glyph.setAttribute("transform", `translate(${q.x.toFixed(1)},${q.y.toFixed(1)})`);
+        glyph.setAttribute("opacity", !landed && L >= stop ? 0 : 1);
       }
       if (paths.ring) paths.ring.setAttribute("opacity", landfallLen !== null && L >= landfallLen ? 1 : 0);
       for (const c of countyNodes) {
@@ -243,15 +261,16 @@ export function stormsChart(host, app) {
     if (!animate || reduced || !paths.length) {
       frame(1);
     } else {
+      const dur = ANIM_MS * speed();
       const t0 = performance.now();
       const step = (now) => {
-        const p = Math.min(1, (now - t0) / ANIM_MS);
+        const p = Math.min(1, (now - t0) / dur);
         frame(p < 1 ? 1 - (1 - p) ** 2 : 1);
         if (p < 1) state.anim = requestAnimationFrame(step); else state.anim = null;
       };
       frame(0);
       state.anim = requestAnimationFrame(step);
-      setTimeout(() => { if (state.anim) { cancelAnimationFrame(state.anim); state.anim = null; frame(1); } }, ANIM_MS + 300);
+      setTimeout(() => { if (state.anim) { cancelAnimationFrame(state.anim); state.anim = null; frame(1); } }, dur + 300);
     }
     drawLegend();
   }
@@ -281,7 +300,7 @@ export function stormsChart(host, app) {
       el("span.item", {}, [el("span", { text: "Dotted outline: " }), term("declared county analyzed under this storm", TERMS.analyzed)]),
       el("span.item", { text: "Gray: not analyzed under this storm" }),
       el("span.item", {}, [el("span.dot", { style: { background: PINK, opacity: .6 } }), el("span", { text: ` Circles: ${CIRCLES[state.circle]} in every analyzed county` })]),
-      el("span.item", {}, [hurricaneSwatch(color(state.storm)), el("span", { text: " Track as a curve through the 6-hourly fixes; ring at the strongest Florida landfall" })]),
+      el("span.item", {}, [hurricaneSwatch(color(state.storm)), el("span", { text: " Track as a curve through the HURDAT2 fixes; the symbol rests at the strongest Florida landfall; an open circle marks the closest approach of a storm that did not land" })]),
     ]));
   }
   function hurricaneSwatch(col) {
@@ -309,7 +328,9 @@ export function stormsChart(host, app) {
     };
     if (!state.pinned) {
       side.append(el("h4", { text: `${s.name} ${s.season}` }));
-      add(s.landfall_source === "landfall_record" ? "Strongest Florida landfall" : "Nearest fix to the coast", `${fmt.dateLabel(s.fl_landfall_time)}, ${fmt.num(s.fl_landfall_vmax_kt, 0)} kt`, TERMS.landfall);
+      const trk = app.geo.tracks[state.storm] || {};
+      const landed = trk.landfall && trk.landfall_source !== "strongest_fix_in_box";
+      if (trk.landfall) add(landed ? "Strongest Florida landfall" : "Closest approach, no landfall", `${fmt.dateLabel(trk.landfall_time.slice(0, 16))}, ${fmt.num(trk.landfall_vmax_kt, 0)} kt${landed ? `, ${fmt.num(trk.hours_over_land, 1)} h over land` : ""}`, TERMS.landfall);
       add("Declared counties", fmt.count(s.n_ia_counties), TERMS.declared);
       add("Analyzed under this storm", `${fmt.count(analyzed)} (dotted outline)`, TERMS.analyzed);
       if (tot) add("Passing the damage rule", `${fmt.count(tot.damage_counties)} (heavy outline, the analysis sample)`, RULE);
@@ -346,5 +367,5 @@ export function stormsChart(host, app) {
       run: (c) => { state.storm = s.storm; state.pinned = null; seg.setValue(s.storm); draw(true); renderSide(); return c.sleep(ANIM_MS + 1400); },
     };
   });
-  tour({ name: "the sixteen storms", steps, loops: 1, rest: () => {} }).attach(tourHost);
+  tour({ name: "the sixteen storms", steps, rest: () => {}, autoplay: !still }).attach(tourHost);
 }

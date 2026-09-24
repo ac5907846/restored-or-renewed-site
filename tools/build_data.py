@@ -329,7 +329,10 @@ def build_storms():
     cmd = rd("a13_florida_map", "county_map_data.csv", dtype={"county_fips": str})
     tot = rd("a13_florida_map", "storm_totals.csv")
     trk = rd("a08_storm_catalog", "tracks.csv")
-    land = storms.set_index("storm")["fl_landfall_time"].to_dict()
+    # the accepted landfall of Fig. 2 (a13 storm_labels.csv): Ivan's Gulf
+    # Shores landfall rather than the 25 kt remnant crossing, and for a
+    # storm that did not land, the fix nearest the coast
+    labels = rd("a13_florida_map", "storm_labels.csv").set_index("storm")
     tracks = {}
     for key, g in trk.groupby("storm"):
         g = g.sort_values("time")
@@ -337,9 +340,13 @@ def build_storms():
                        "lat": [round(float(v), 2) for v in g["lat"]],
                        "vmax": [float(v) for v in g["vmax"]],
                        "time": list(g["time"])}
-        hit = g[g["time"] == land.get(key)]
-        if len(hit):
-            tracks[key]["landfall"] = [round(float(hit["lon"].iloc[0]), 2), round(float(hit["lat"].iloc[0]), 2)]
+        if key in labels.index:
+            lab = labels.loc[key]
+            tracks[key]["landfall"] = [float(lab["landfall_lon"]), float(lab["landfall_lat"])]
+            tracks[key]["landfall_source"] = str(lab["landfall_source"])
+            tracks[key]["landfall_time"] = str(lab["landfall_time"])
+            tracks[key]["landfall_vmax_kt"] = float(lab["landfall_vmax_kt"])
+            tracks[key]["hours_over_land"] = float(lab["hours_over_land"])
     return {
         "catalog": records(storms.round(2)),
         "county": records(cmd.round(3)),
