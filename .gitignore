@@ -14,3 +14,8 @@ __pycache__/
 
 # the earlier draft of the site, kept for reference, not deployed
 _archive/
+
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
